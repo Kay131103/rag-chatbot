@@ -23,7 +23,7 @@ it("renders the panel and chat input", async () => {
 it("warns when the LLM is not configured", async () => {
   mockFetch({ "/api/health": { status: "ok", llm_configured: false } });
   render(<App />);
-  expect(await screen.findByText(/ANTHROPIC_API_KEY is not set/)).toBeInTheDocument();
+  expect(await screen.findByText(/the LLM API key is not set/)).toBeInTheDocument();
 });
 
 it("lists documents and toggles the source filter", async () => {

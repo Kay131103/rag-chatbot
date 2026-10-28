@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from app.config import get_settings
 from app.graph import build_graph
 from app.ingest import UnsupportedFileError, chunk_text, extract_text
-from app.llm import LLM, ClaudeLLM
+from app.llm import LLM, build_llm
 from app.vectorstore import VectorStore
 from app.web import FetchError, fetch_page_text
 
@@ -37,9 +37,7 @@ def create_app(llm: LLM | None = None, store: VectorStore | None = None) -> Fast
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         vs = store or VectorStore(settings.chroma_path, settings.collection_name)
-        model = llm or ClaudeLLM(
-            settings.anthropic_api_key, settings.claude_model, settings.max_tokens
-        )
+        model = llm or build_llm(settings)
         app.state.store = vs
         app.state.graph = build_graph(model, vs, settings.top_k, settings.max_distance)
         yield
@@ -54,7 +52,7 @@ def create_app(llm: LLM | None = None, store: VectorStore | None = None) -> Fast
 
     @app.get("/api/health")
     async def health() -> dict[str, Any]:
-        return {"status": "ok", "llm_configured": bool(llm or settings.anthropic_api_key)}
+        return {"status": "ok", "llm_configured": llm is not None or settings.llm_configured}
 
     @app.get("/api/documents")
     async def list_documents() -> list[dict[str, Any]]:

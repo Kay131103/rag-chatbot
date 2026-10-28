@@ -19,7 +19,7 @@ export default function App() {
       <div className="main">
         {!llmOk && (
           <div className="banner">
-            Backend unreachable or ANTHROPIC_API_KEY is not set. Set it in backend/.env and restart.
+            Backend unreachable or the LLM API key is not set. Set it in backend/.env and restart.
           </div>
         )}
         <Chat sources={selected} />

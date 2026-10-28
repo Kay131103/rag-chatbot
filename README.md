@@ -1,6 +1,6 @@
 # RAG Chatbot
 
-Retrieval-augmented chatbot: **FastAPI** + **LangGraph** + **ChromaDB** + **Claude API**, with a **React** (Vite + TypeScript) frontend.
+Retrieval-augmented chatbot: **FastAPI** + **LangGraph** + **ChromaDB** + **Claude or Gemini**, with a **React** (Vite + TypeScript) frontend.
 
 ## How it works
 
@@ -14,7 +14,9 @@ rewrite (standalone query from history) → retrieve (top-k from Chroma)
 ```
 
 Answers stream to the UI over Server-Sent Events, along with the retrieved sources.
-Embeddings use Chroma's built-in local model (all-MiniLM-L6-v2, downloaded on first use); Claude is used for generation and query rewriting.
+Embeddings use Chroma's built-in local model (all-MiniLM-L6-v2, downloaded on first use); The LLM (Claude by default, or Gemini) is used for generation and query rewriting.
+
+**Choosing a provider:** set `LLM_PROVIDER=anthropic` (needs `ANTHROPIC_API_KEY`) or `LLM_PROVIDER=gemini` (needs `GEMINI_API_KEY`, optional `GEMINI_MODEL`) in `backend/.env`.
 
 ## Features
 
