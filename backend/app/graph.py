@@ -24,6 +24,7 @@ class RAGState(TypedDict, total=False):
     question: str
     history: list[dict[str, str]]
     query: str
+    sources: list[str]
     hits: list[Hit]
     answer: str
 
@@ -42,7 +43,11 @@ def build_graph(llm: LLM, store: VectorStore, top_k: int, max_distance: float) -
         return {"query": query or state["question"]}
 
     async def retrieve(state: RAGState) -> dict[str, Any]:
-        hits = [h for h in store.search(state["query"], top_k) if h.distance <= max_distance]
+        hits = [
+            h
+            for h in store.search(state["query"], top_k, state.get("sources"))
+            if h.distance <= max_distance
+        ]
         get_stream_writer()({"type": "sources", "sources": [_hit_dict(h) for h in hits]})
         return {"hits": hits}
 

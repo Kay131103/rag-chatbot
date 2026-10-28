@@ -39,8 +39,24 @@ export async function uploadDocument(file: File): Promise<DocumentInfo> {
   return res.json();
 }
 
+export async function addUrl(url: string): Promise<DocumentInfo> {
+  const res = await ensureOk(
+    await fetch("/api/documents/url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    }),
+  );
+  return res.json();
+}
+
+export async function getHealth(): Promise<{ status: string; llm_configured: boolean }> {
+  return (await ensureOk(await fetch("/api/health"))).json();
+}
+
 export async function deleteDocument(source: string): Promise<void> {
-  await ensureOk(await fetch(`/api/documents/${encodeURIComponent(source)}`, { method: "DELETE" }));
+  const path = source.split("/").map(encodeURIComponent).join("/");
+  await ensureOk(await fetch(`/api/documents/${path}`, { method: "DELETE" }));
 }
 
 /** Parse a server-sent-event text buffer into events; returns the unconsumed remainder. */
@@ -56,6 +72,7 @@ export function parseSSE(buffer: string): { events: ChatEvent[]; rest: string } 
 export async function streamChat(
   question: string,
   history: Message[],
+  sources: string[],
   onEvent: (e: ChatEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
@@ -63,7 +80,7 @@ export async function streamChat(
     await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, history }),
+      body: JSON.stringify({ question, history, sources }),
       signal,
     }),
   );

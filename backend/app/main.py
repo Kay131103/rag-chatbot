@@ -13,6 +13,7 @@ from app.graph import build_graph
 from app.ingest import UnsupportedFileError, chunk_text, extract_text
 from app.llm import LLM, ClaudeLLM
 from app.vectorstore import VectorStore
+from app.web import FetchError, fetch_page_text
 
 
 class Message(BaseModel):
@@ -23,6 +24,11 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     question: str
     history: list[Message] = []
+    sources: list[str] | None = None
+
+
+class UrlRequest(BaseModel):
+    url: str
 
 
 def create_app(llm: LLM | None = None, store: VectorStore | None = None) -> FastAPI:
@@ -47,8 +53,8 @@ def create_app(llm: LLM | None = None, store: VectorStore | None = None) -> Fast
     )
 
     @app.get("/api/health")
-    async def health() -> dict[str, str]:
-        return {"status": "ok"}
+    async def health() -> dict[str, Any]:
+        return {"status": "ok", "llm_configured": bool(llm or settings.anthropic_api_key)}
 
     @app.get("/api/documents")
     async def list_documents() -> list[dict[str, Any]]:
@@ -68,7 +74,19 @@ def create_app(llm: LLM | None = None, store: VectorStore | None = None) -> Fast
         app.state.store.delete_source(name)
         return {"source": name, "chunks": app.state.store.add(name, chunks)}
 
-    @app.delete("/api/documents/{source}")
+    @app.post("/api/documents/url")
+    async def ingest_url(req: UrlRequest) -> dict[str, Any]:
+        try:
+            text = await fetch_page_text(req.url)
+        except FetchError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        chunks = chunk_text(text, settings.chunk_size, settings.chunk_overlap)
+        if not chunks:
+            raise HTTPException(status_code=422, detail="No text found at URL")
+        app.state.store.delete_source(req.url)
+        return {"source": req.url, "chunks": app.state.store.add(req.url, chunks)}
+
+    @app.delete("/api/documents/{source:path}")
     async def delete_document(source: str) -> dict[str, str]:
         app.state.store.delete_source(source)
         return {"deleted": source}
@@ -77,7 +95,11 @@ def create_app(llm: LLM | None = None, store: VectorStore | None = None) -> Fast
     async def chat(req: ChatRequest) -> StreamingResponse:
         if not req.question.strip():
             raise HTTPException(status_code=422, detail="Question is empty")
-        state = {"question": req.question, "history": [m.model_dump() for m in req.history]}
+        state = {
+            "question": req.question,
+            "history": [m.model_dump() for m in req.history],
+            "sources": req.sources or [],
+        }
 
         async def events() -> AsyncIterator[str]:
             try:

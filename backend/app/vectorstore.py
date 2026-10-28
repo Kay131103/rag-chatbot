@@ -39,10 +39,11 @@ class VectorStore:
         )
         return len(chunks)
 
-    def search(self, query: str, k: int) -> list[Hit]:
+    def search(self, query: str, k: int, sources: list[str] | None = None) -> list[Hit]:
         if self._col.count() == 0:
             return []
-        res = self._col.query(query_texts=[query], n_results=k)
+        where: Any = {"source": {"$in": sources}} if sources else None
+        res = self._col.query(query_texts=[query], n_results=k, where=where)
         docs = (res["documents"] or [[]])[0]
         metas = (res["metadatas"] or [[]])[0]
         dists = (res["distances"] or [[]])[0]

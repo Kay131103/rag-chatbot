@@ -1,6 +1,7 @@
 import json
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -14,7 +15,7 @@ def _events(body: str) -> list[dict[str, Any]]:
 
 def test_upload_list_chat_delete(store: VectorStore, llm: FakeLLM) -> None:
     with TestClient(create_app(llm=llm, store=store)) as client:
-        assert client.get("/api/health").json() == {"status": "ok"}
+        assert client.get("/api/health").json() == {"status": "ok", "llm_configured": True}
 
         r = client.post(
             "/api/documents",
@@ -57,3 +58,27 @@ def test_upload_rejects_bad_type_and_empty(store: VectorStore, llm: FakeLLM) -> 
         r = client.post("/api/documents", files={"file": ("x.txt", b"  ")})
         assert r.status_code == 422
         assert client.post("/api/chat", json={"question": " "}).status_code == 422
+
+
+def test_source_filter_and_url_ingest(
+    store: VectorStore, llm: FakeLLM, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def fake_fetch(url: str) -> str:
+        return "Dogs are loyal domestic animals."
+
+    monkeypatch.setattr("app.main.fetch_page_text", fake_fetch)
+    store.add("cats.txt", ["Cats are small mammals."])
+    with TestClient(create_app(llm=llm, store=store)) as client:
+        r = client.post("/api/documents/url", json={"url": "https://example.com/dogs"})
+        assert r.json() == {"source": "https://example.com/dogs", "chunks": 1}
+        body = {"question": "Cats are small mammals.", "sources": ["cats.txt"]}
+        events = _events(client.post("/api/chat", json=body).text)
+        assert {s["source"] for s in events[0]["sources"]} == {"cats.txt"}
+        deleted = client.delete("/api/documents/https://example.com/dogs")
+        assert deleted.status_code == 200
+        assert client.get("/api/health").json()["llm_configured"] is True
+
+
+def test_url_ingest_error(store: VectorStore, llm: FakeLLM) -> None:
+    with TestClient(create_app(llm=llm, store=store)) as client:
+        assert client.post("/api/documents/url", json={"url": "ftp://x"}).status_code == 400
