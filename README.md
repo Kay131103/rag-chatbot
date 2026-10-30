@@ -9,14 +9,14 @@ Each chat question runs through a LangGraph pipeline:
 
 ```
 rewrite (standalone query from history) → retrieve (top-k from Chroma)
-        → generate (Claude, streamed, cites [1], [2]…)   if relevant hits
+        → generate (Gemini, streamed, cites [1], [2]…)   if relevant hits
         → no_context (canned reply)                      otherwise
 ```
 
 Answers stream to the UI over Server-Sent Events, along with the retrieved sources.
-Embeddings use Chroma's built-in local model (all-MiniLM-L6-v2, downloaded on first use); The LLM (Claude by default, or Gemini) is used for generation and query rewriting.
+Embeddings use Chroma's built-in local model (all-MiniLM-L6-v2, downloaded on first use); The LLM (Gemini by default, or Claude) is used for generation and query rewriting.
 
-**Choosing a provider:** set `LLM_PROVIDER=anthropic` (needs `ANTHROPIC_API_KEY`) or `LLM_PROVIDER=gemini` (needs `GEMINI_API_KEY`, optional `GEMINI_MODEL`) in `backend/.env`.
+**Choosing a provider:** `LLM_PROVIDER` defaults to `gemini` (needs `GEMINI_API_KEY`, optional `GEMINI_MODEL`); set `LLM_PROVIDER=anthropic` (needs `ANTHROPIC_API_KEY`) to use Claude.
 
 ## Features
 
@@ -24,7 +24,7 @@ Embeddings use Chroma's built-in local model (all-MiniLM-L6-v2, downloaded on fi
 - Restrict a question to selected documents
 - Streaming answers rendered as Markdown with inline `[n]` citations and expandable source passages
 - Conversation memory (follow-ups are rewritten into standalone queries), persisted in the browser; New chat, Copy, Regenerate, Stop
-- Warning banner when the backend is down or `ANTHROPIC_API_KEY` is missing; dark mode
+- Warning banner when the backend is down or the LLM API key is missing; dark mode
 
 ## Run
 
@@ -34,7 +34,7 @@ Backend (Python 3.11+):
 cd backend
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
-cp .env.example .env                                  # set ANTHROPIC_API_KEY
+cp .env.example .env                                  # set GEMINI_API_KEY
 uvicorn app.main:app --reload
 ```
 

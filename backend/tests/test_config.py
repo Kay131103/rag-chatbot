@@ -5,7 +5,7 @@ from app.config import Settings
 
 def test_defaults() -> None:
     s = Settings(_env_file=None)
-    assert s.llm_provider == "anthropic"
+    assert s.llm_provider == "gemini"
     assert s.top_k == 4
     assert s.chunk_overlap < s.chunk_size
 
