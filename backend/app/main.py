@@ -1,9 +1,10 @@
+import hmac
 import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -31,8 +32,31 @@ class UrlRequest(BaseModel):
     url: str
 
 
+_READ_CHUNK = 1024 * 1024
+
+
+async def _read_limited(file: UploadFile, limit: int) -> bytes:
+    """Read an upload into memory up to `limit` bytes, failing fast past it."""
+    data = bytearray()
+    while True:
+        chunk = await file.read(_READ_CHUNK)
+        if not chunk:
+            break
+        data.extend(chunk)
+        if len(data) > limit:
+            raise HTTPException(status_code=413, detail="File is too large")
+    return bytes(data)
+
+
 def create_app(llm: LLM | None = None, store: VectorStore | None = None) -> FastAPI:
     settings = get_settings()
+
+    def require_api_key(request: Request, x_api_key: str | None = Header(default=None)) -> None:
+        # Health stays public so uptime checks and the frontend banner work without a key.
+        if request.url.path == "/api/health" or not settings.app_api_key:
+            return
+        if not x_api_key or not hmac.compare_digest(x_api_key, settings.app_api_key):
+            raise HTTPException(status_code=401, detail="Missing or invalid API key")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -42,7 +66,7 @@ def create_app(llm: LLM | None = None, store: VectorStore | None = None) -> Fast
         app.state.graph = build_graph(model, vs, settings.top_k, settings.max_distance)
         yield
 
-    app = FastAPI(title="RAG Chatbot", lifespan=lifespan)
+    app = FastAPI(title="RAG Chatbot", lifespan=lifespan, dependencies=[Depends(require_api_key)])
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -62,8 +86,9 @@ def create_app(llm: LLM | None = None, store: VectorStore | None = None) -> Fast
     @app.post("/api/documents")
     async def upload(file: UploadFile = File(...)) -> dict[str, Any]:  # noqa: B008
         name = file.filename or "upload"
+        data = await _read_limited(file, settings.max_upload_bytes)
         try:
-            text = extract_text(name, await file.read())
+            text = extract_text(name, data)
         except UnsupportedFileError as e:
             raise HTTPException(status_code=415, detail=str(e)) from e
         chunks = chunk_text(text, settings.chunk_size, settings.chunk_overlap)

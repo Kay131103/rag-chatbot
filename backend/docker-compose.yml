@@ -1,0 +1,15 @@
+# Run: cp .env.example .env  (set ANTHROPIC_API_KEY / GEMINI_API_KEY, APP_API_KEY)
+#      docker compose up -d --build
+services:
+  rag-chatbot:
+    build: .
+    image: rag-chatbot-backend:latest
+    ports:
+      - "8000:8000"   # change the host port if running alongside other services
+    env_file: .env
+    volumes:
+      - chroma_data:/chroma_data
+    restart: unless-stopped
+
+volumes:
+  chroma_data:

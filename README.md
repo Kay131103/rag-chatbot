@@ -46,6 +46,11 @@ npm install
 npm run dev        # http://localhost:5173, proxies /api to :8000
 ```
 
+## Deploying
+
+- **Backend** (FastAPI + ChromaDB) needs a host with a persistent disk. A `Dockerfile` is provided — mount a volume at `/chroma_data`. Set `CORS_ORIGINS` to your frontend origin and, optionally, `APP_API_KEY`.
+- **Frontend** (Vite) builds to static files. Deploy `frontend/` to Netlify/Vercel and set `VITE_API_URL` to your backend URL (and `VITE_API_KEY` to match `APP_API_KEY`). A `netlify.toml` is included.
+
 ## API
 
 | Method | Path | Purpose |

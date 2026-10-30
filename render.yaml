@@ -1,0 +1,22 @@
+# Render Blueprint — RAG chatbot backend.
+# Requires a persistent disk (paid plan) for the ChromaDB index.
+services:
+  - type: web
+    name: rag-chatbot-backend
+    runtime: docker
+    rootDir: backend
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: APP_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: '["https://your-frontend.netlify.app"]'
+    disk:
+      name: chroma-data
+      mountPath: /chroma_data
+      sizeGB: 1

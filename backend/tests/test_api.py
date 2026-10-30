@@ -4,6 +4,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from app.config import get_settings
 from app.main import create_app
 from app.vectorstore import VectorStore
 from tests.conftest import FakeLLM
@@ -82,3 +83,19 @@ def test_source_filter_and_url_ingest(
 def test_url_ingest_error(store: VectorStore, llm: FakeLLM) -> None:
     with TestClient(create_app(llm=llm, store=store)) as client:
         assert client.post("/api/documents/url", json={"url": "ftp://x"}).status_code == 400
+
+
+def test_api_key_enforced(
+    store: VectorStore, llm: FakeLLM, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("APP_API_KEY", "s3cret")
+    get_settings.cache_clear()
+    try:
+        with TestClient(create_app(llm=llm, store=store)) as client:
+            assert client.get("/api/documents").status_code == 401
+            assert client.get("/api/documents", headers={"X-API-Key": "wrong"}).status_code == 401
+            assert client.get("/api/documents", headers={"X-API-Key": "s3cret"}).status_code == 200
+            # health stays public
+            assert client.get("/api/health").status_code == 200
+    finally:
+        get_settings.cache_clear()

@@ -1,0 +1,10 @@
+# Netlify build settings for the Vite frontend.
+# Deploy this "frontend" directory as the site root, then set VITE_API_URL and
+# VITE_API_KEY under Site settings > Environment variables.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
