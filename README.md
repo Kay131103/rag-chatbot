@@ -69,3 +69,20 @@ cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 ```
 
 The same checks run in GitHub Actions (`.github/workflows/ci.yml`).
+
+
+## Deploy it free (one click each)
+
+**Frontend** — already live: https://rag-chatbot-6ii.pages.dev
+Auto-deploys on every push to `main` (GitHub Actions → Cloudflare Pages).
+
+**Backend** — deploy to Render's free plan:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Kay131103/rag-chatbot)
+
+1. Click the button, log in / create a free Render account
+2. When prompted for `GEMINI_API_KEY`, paste a key from
+   [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (free tier)
+3. Leave `APP_API_KEY` blank, deploy — backend lands at
+   `https://rag-chatbot-backend.onrender.com` (already wired into the frontend)
+4. Free instances sleep after ~15 min idle; first request after a nap takes ~30 s
