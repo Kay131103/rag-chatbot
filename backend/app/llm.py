@@ -42,7 +42,7 @@ class ClaudeLLM:
 
 class GeminiLLM:
     def __init__(self, api_key: str, model: str, max_tokens: int) -> None:
-        self._client = genai.Client(api_key=api_key)
+        self._client = genai.Client(api_key=api_key, http_options={"api_version": "v1beta"})
         self._model = model
         self._max_tokens = max_tokens
 
