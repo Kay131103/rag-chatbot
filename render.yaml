@@ -14,7 +14,7 @@ services:
         value: gemini
       # Google retired gemini-2.5-flash for new API users (Nov 2026)
       - key: GEMINI_MODEL
-        value: gemini-flash-latest
+        value: gemini-2.5-flash-lite
       - key: GEMINI_API_KEY
         sync: false
       - key: APP_API_KEY
